@@ -10,11 +10,16 @@ import os
 from dotenv import load_dotenv
 load_dotenv("settings.env")
 
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "ramanujan")
-DB_NAME = os.getenv("DB_NAME", "arbitrage")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = int(os.getenv("DB_PORT", 5432))
+# DB_USER = os.getenv("DB_USER", "postgres")
+# DB_PASSWORD = os.getenv("DB_PASSWORD", "ramanujan")
+# DB_NAME = os.getenv("DB_NAME", "arbitrage")
+# DB_HOST = os.getenv("DB_HOST", "localhost")
+# DB_PORT = int(os.getenv("DB_PORT", 5432))
+DB_USER="postgres"
+DB_PASSWORD="JKtslRDnrApuHAAIzQpErSIeSRbYdaQw"
+DB_NAME="railway"
+DB_HOST="maglev.proxy.rlwy.net"
+DB_PORT=15188
 
 # Exchange Fetchers
 # Cex
