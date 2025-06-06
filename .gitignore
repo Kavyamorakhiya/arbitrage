@@ -1,0 +1,29 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Distribution/packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+.env/
+
+# Logs and temporary files
+*.log
+*.txt
+*.tmp
+
+# Extra files
+settings.env
+arbitrage_bot2.py
+arbitrage_bot1.py
+arbitrage_simulation.py
+multiple_exchanges.py
+trades_report.csv
+token_info_cache.json
+sol_usdt_arbitrage_sim.tsx
+knowledge.txt
