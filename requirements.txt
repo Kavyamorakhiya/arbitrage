@@ -10,7 +10,6 @@ cffi==1.17.1
 charset-normalizer==3.4.2
 cryptography==45.0.2
 frozenlist==1.6.0
-flask
 idna==3.10
 markdown-it-py==3.0.0
 mdurl==0.1.2

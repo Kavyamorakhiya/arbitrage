@@ -16,10 +16,10 @@ load_dotenv("settings.env")
 # DB_HOST = os.getenv("DB_HOST", "localhost")
 # DB_PORT = int(os.getenv("DB_PORT", 5432))
 DB_USER="postgres"
-DB_PASSWORD="JKtslRDnrApuHAAIzQpErSIeSRbYdaQw"
+DB_PASSWORD="PJALHDTSkaKuJwWWfcqIzCmFUGlHFaJk"
 DB_NAME="railway"
-DB_HOST="maglev.proxy.rlwy.net"
-DB_PORT=15188
+DB_HOST="postgres.railway.internal"
+DB_PORT=5432
 
 
 # Exchange Fetchers
@@ -95,7 +95,6 @@ async def main():
                 hyperliquid_ws = HyperliquidFetcher(pair)
                 await hyperliquid_ws.connect()
                 matrix.add_fetcher(pair, hyperliquid_ws)
-
             await run_arbitrage_for_all_pairs(matrix, db_logger)
     finally:
         await shutdown(matrix)

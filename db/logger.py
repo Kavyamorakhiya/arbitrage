@@ -149,6 +149,9 @@ class DatabaseLogger:
         For simple price logger (no arbitrage), same idea: convert ts → datetime if needed.
         """
         async with self.lock:
+            if len(self.price_buffer) >= 100000:
+                await self.clear_exchange_prices()
+                return
             for name, price, ts in prices:
                 if isinstance(ts, str):
                     t = datetime.strptime(ts, "%H:%M:%S").time()
@@ -158,6 +161,14 @@ class DatabaseLogger:
                 # Append a tuple matching the INSERT: (pair, exchange_name, price, timestamp, arbitrage_id=None)
                 self.price_buffer.append((pair, name, price, raw_ts, None))
     
+    async def clear_exchange_prices(self):
+        async with self.db_pool.acquire() as conn:
+            await conn.execute("TRUNCATE TABLE exchange_prices")
+        async with self.lock:
+            self.price_buffer.clear()
+        logger.warning("exchange_prices table and price_buffer cleared after hitting 100,000 row limit.")
+
+
     async def log_trade(
         self,
         timestamp: datetime,
