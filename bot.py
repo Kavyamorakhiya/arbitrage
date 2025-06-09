@@ -21,6 +21,7 @@ DB_NAME="railway"
 DB_HOST="maglev.proxy.rlwy.net"
 DB_PORT=15188
 
+
 # Exchange Fetchers
 # Cex
 from exchanges.binance import BinanceFetcher
