@@ -6,6 +6,23 @@ import asyncio
 import asyncpg
 import os
 
+import shutil
+
+source_folder = "/data"
+zip_path = "/data/data_backup.zip"
+
+# This will zip everything inside /data into data_backup.zip
+shutil.make_archive(zip_path.replace(".zip", ""), 'zip', source_folder)
+
+from flask import Flask, send_from_directory
+
+app = Flask(__name__)
+UPLOAD_FOLDER = "/data"
+
+@app.route("/download/<filename>")
+def download_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+
 
 
 logger = logging.getLogger(__name__)
