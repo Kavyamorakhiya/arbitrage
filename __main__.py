@@ -47,5 +47,5 @@ if __name__ == "__main__":
         for name in dirs:
             print(f"  Sub-directory: {name}")
 
-
-    asyncio.run(main())
+    app.run()
+    # asyncio.run(main())
