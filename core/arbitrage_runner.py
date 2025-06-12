@@ -11,7 +11,7 @@ from rich.live import Live
 async def run_arbitrage_for_all_pairs(matrix, db_logger):
     console = Console()
     SPREAD_THRESHOLD = 0.05
-    PERCENT_THRESHOLD = 0.40
+    PERCENT_THRESHOLD = 0.50
     CONVERGENCE_THRESHOLD = 0.10
 
     open_positions: Dict[str, dict] = {}
@@ -31,19 +31,18 @@ async def run_arbitrage_for_all_pairs(matrix, db_logger):
             prices = []
             for fetcher in fetchers:
                 try:
-                    result = await fetcher.get_price()
+                    result = await fetcher.get_price(pair)
                     if result:
                         price, ts = result
-                        if price is not None:
-                            prices.append((fetcher.name, price, ts.strftime("%H:%M:%S")))
-                except:
+                        prices.append((fetcher.name, price, ts.strftime("%H:%M:%S")))
+                except Exception:
                     continue
 
             if len(prices) < 2:
                 continue
 
             prices.sort(key=lambda x: x[1])
-            await db_logger.log_prices(pair, prices)
+            # await db_logger.log_prices(pair, prices) # Uncomment if you want to log prices
             low_name, low_price, _ = prices[0]
             high_name, high_price, _ = prices[-1]
             spread = high_price - low_price

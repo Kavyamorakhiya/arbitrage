@@ -149,9 +149,6 @@ class DatabaseLogger:
         For simple price logger (no arbitrage), same idea: convert ts → datetime if needed.
         """
         async with self.lock:
-            if len(self.price_buffer) >= 100000:
-                await self.clear_exchange_prices()
-                return
             for name, price, ts in prices:
                 if isinstance(ts, str):
                     t = datetime.strptime(ts, "%H:%M:%S").time()
@@ -161,14 +158,6 @@ class DatabaseLogger:
                 # Append a tuple matching the INSERT: (pair, exchange_name, price, timestamp, arbitrage_id=None)
                 self.price_buffer.append((pair, name, price, raw_ts, None))
     
-    async def clear_exchange_prices(self):
-        async with self.db_pool.acquire() as conn:
-            await conn.execute("TRUNCATE TABLE exchange_prices")
-        async with self.lock:
-            self.price_buffer.clear()
-        logger.warning("exchange_prices table and price_buffer cleared after hitting 100,000 row limit.")
-
-
     async def log_trade(
         self,
         timestamp: datetime,
@@ -203,7 +192,7 @@ class DatabaseLogger:
         while True:
             await asyncio.sleep(self.flush_interval)
             if len(self.arb_buffer) + len(self.price_buffer) > 500:
-                logger.warning("Large buffer detected, flushing early.")
+                logger.debug("Large buffer detected, flushing early.")
             await self.flush()
 
     async def flush(self):
@@ -242,10 +231,18 @@ class DatabaseLogger:
                                 self.price_buffer.append(
                                     (arb["pair"], name, price, raw_ts, arb_id)
                                 )
-
+                        # Uncomment this if you want to insert prices immediately
                         # 3) Now insert *all* buffered prices (including those just added above)
-                        await conn.executemany(
+                        # count the rows length of exchange_prices. If table exchange_prices has more than 500 rows then skip
+                        row_count = await conn.execute(
                             """
+                            SELECT COUNT(*) FROM exchange_prices
+                        """)
+                        if row_count > 500:
+                            pass
+                        else:
+                            await conn.executemany(
+                                """
                               INSERT INTO exchange_prices
                                 (pair, exchange_name, price, timestamp, arbitrage_id)
                               VALUES ($1, $2, $3, $4, $5)
