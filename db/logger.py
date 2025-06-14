@@ -118,7 +118,7 @@ class DatabaseLogger:
         for name, price, ts in prices:
             if isinstance(ts, str):
                 # parse "HH:MM:SS" as today’s date in UTC
-                t = datetime.strptime(ts, "%H:%M:%S").time()
+                t = datetime.strptime(ts, "%H:%M:%S.%f").time()
                 raw_ts = datetime.combine(date.today(), t, tzinfo=timezone.utc)
             else:
                 # assume ts is already a datetime
@@ -151,7 +151,7 @@ class DatabaseLogger:
         async with self.lock:
             for name, price, ts in prices:
                 if isinstance(ts, str):
-                    t = datetime.strptime(ts, "%H:%M:%S").time()
+                    t = datetime.strptime(ts, "%H:%M:%S.%f").time()
                     raw_ts = datetime.combine(date.today(), t, tzinfo=timezone.utc)
                 else:
                     raw_ts = ts
@@ -202,6 +202,7 @@ class DatabaseLogger:
                 return
 
             try:
+                self.price_buffer.clear()
                 async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
                         # 1) Insert every arbitrage opportunity and collect its new arb_id
@@ -233,22 +234,14 @@ class DatabaseLogger:
                                 )
                         # Uncomment this if you want to insert prices immediately
                         # 3) Now insert *all* buffered prices (including those just added above)
-                        # count the rows length of exchange_prices. If table exchange_prices has more than 500 rows then skip
-                        row_count = await conn.execute(
-                            """
-                            SELECT COUNT(*) FROM exchange_prices
-                        """)
-                        if row_count > 500:
-                            pass
-                        else:
-                            await conn.executemany(
-                                """
-                              INSERT INTO exchange_prices
-                                (pair, exchange_name, price, timestamp, arbitrage_id)
-                              VALUES ($1, $2, $3, $4, $5)
-                            """,
-                            self.price_buffer
-                        )
+                        # await conn.executemany(
+                        #     """
+                        #       INSERT INTO exchange_prices
+                        #         (pair, exchange_name, price, timestamp, arbitrage_id)
+                        #       VALUES ($1, $2, $3, $4, $5)
+                        #     """,
+                        #     self.price_buffer
+                        # )
                         # 4) Insert all buffered trades
                         if self.trade_buffer:
                             await conn.executemany(

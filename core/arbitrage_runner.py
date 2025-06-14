@@ -1,13 +1,15 @@
 #  core/arbitrage_runner.py
 
 from core.trade_simulator import simulate_entry_trade, simulate_exit_trade
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List
 import asyncio
 from rich.console import Console
 from rich.table import Table
 from rich.live import Live
-
+import logging
+logger = logging.getLogger("cex_dex_arbitrage.core.arbitrage_runner")
+IST = timezone(timedelta(hours=5, minutes=30))  # Indian Standard Time
 async def run_arbitrage_for_all_pairs(matrix, db_logger):
     console = Console()
     SPREAD_THRESHOLD = 0.05
@@ -34,7 +36,8 @@ async def run_arbitrage_for_all_pairs(matrix, db_logger):
                     result = await fetcher.get_price(pair)
                     if result:
                         price, ts = result
-                        prices.append((fetcher.name, price, ts.strftime("%H:%M:%S")))
+                        ist_ts = ts.astimezone(IST)
+                        prices.append((fetcher.name, price, ist_ts.strftime("%H:%M:%S.%f")[:-3]))
                 except Exception:
                     continue
 
@@ -65,7 +68,7 @@ async def run_arbitrage_for_all_pairs(matrix, db_logger):
             )
 
             # ENTRY
-            if spread >= SPREAD_THRESHOLD and spread_pct >= PERCENT_THRESHOLD and pair not in open_positions:
+            if spread_pct >= PERCENT_THRESHOLD and pair not in open_positions:
                 position = simulate_entry_trade(
                     buy_price=low_price,
                     sell_price=high_price,
@@ -85,7 +88,7 @@ async def run_arbitrage_for_all_pairs(matrix, db_logger):
                 open_positions[pair] = position
 
                 console.log(f"[bold green]ENTRY:[/bold green] {pair} | BUY on {low_name} @ {low_price:.2f}, SHORT on {high_name} @ {high_price:.2f} | Spread: {spread_pct:.2f}%")
-
+                logger.debug(f"ENTRY: {pair} | BUY on {low_name} @ {low_price:.2f}, SHORT on {high_name} @ {high_price:.2f} | Spread: {spread_pct:.2f}%")
                 # net_profit, gross_profit = simulate_exit_trade(position, low_price, high_price)
                 await db_logger.log_opportunity(
                     pair, low_name, low_price, high_name, high_price,
@@ -117,7 +120,7 @@ async def run_arbitrage_for_all_pairs(matrix, db_logger):
                         "sell_exchange": position["sell_exchange"]
                     })
                     console.log(f"[bold red]EXIT:[/bold red] {pair} | NP: ${net_profit:.2f} | Duration: {duration:.1f}s | Converged.")
-
+                    logger.debug(f"EXIT: {pair} | NP: ${net_profit:.2f} | Duration: {duration:.1f}s | Converged.")
                     await db_logger.log_trade(
                         timestamp=position["entry_time"],
                         pair=pair,
@@ -162,11 +165,6 @@ async def run_arbitrage_for_all_pairs(matrix, db_logger):
                     ""
                 )
 
-        # Print summary every N trades
-        if len(paper_trades) > 0 and len(paper_trades) % 5 == 0:
-            total_np = sum(t["net_profit"] for t in paper_trades)
-            console.log(f"[bold blue]PAPER TRADE SUMMARY:[/bold blue] {len(paper_trades)} trades | Total Net Profit: ${total_np:.2f}")
-
         return table
 
 
@@ -175,4 +173,3 @@ async def run_arbitrage_for_all_pairs(matrix, db_logger):
             table = await build_table()
             live.update(table)
             await asyncio.sleep(0.2)
-

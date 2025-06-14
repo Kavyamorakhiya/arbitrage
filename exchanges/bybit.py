@@ -1,4 +1,4 @@
-# exchanges/binance.py
+# exchanges/bybit.py
 
 from exchanges.base import ExchangeFetcher
 from datetime import datetime, timezone
@@ -72,7 +72,14 @@ class BybitFetcher(ExchangeFetcher):
                     tickers = await self.exchange.watch_tickers(self.pairs)
                     # Update our local cache
                     for symbol, ticker in tickers.items():
-                        self.latest_prices[symbol] = ticker["last"]
+                        price = ticker.get("last")
+                        ts = ticker.get("timestamp")
+                        if ts:
+                            ts = datetime.fromtimestamp(ts / 1000, timezone.utc)
+                        else:
+                            ts = datetime.now(timezone.utc)
+
+                        self.latest_prices[symbol] = (price, ts)
                     self.connected = True
                 except Exception as e:
                     self.connected = False
@@ -84,9 +91,11 @@ class BybitFetcher(ExchangeFetcher):
 
     async def get_price(self, symbol: str) -> Optional[Tuple[float, datetime]]:
         """Return latest price for a given symbol + timestamp."""
-        price = self.latest_prices.get(symbol)
-        if price is not None:
-            return price, datetime.now(timezone.utc)
+        result = self.latest_prices.get(symbol)
+        if result:
+            price, ts = result
+            if price is not None:
+                return price, ts
         return None, None
 
 

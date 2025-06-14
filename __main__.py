@@ -4,6 +4,7 @@ setup_logger(log_to_file=True)
 from bot import main
 import asyncio
 
+
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":

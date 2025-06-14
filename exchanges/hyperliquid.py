@@ -40,7 +40,7 @@ logger = logging.getLogger("cex_dex_arbitrage.exchanges.hyperliquid")
             
 #             # If there's a clear match, take it
 #             best_match = possible_matches[0]  # Pick the first match or apply a better heuristic
-#             logger.warning(f"[Hyperliquid] Pair '{self.pair}' not found. Using closest match: '{best_match}'")
+#             logger.debug(f"[Hyperliquid] Pair '{self.pair}' not found. Using closest match: '{best_match}'")
 
 #             self.pair = best_match
 #             market = self.exchange.market(self.pair)
@@ -119,12 +119,12 @@ class HyperliquidFetcher(ExchangeFetcher):
                 if not candidates:
                     raise ValueError(f"[Hyperliquid] No market found for {pair}")
                 market_id = self.exchange.market(candidates[0])['symbol']
-                logger.warning(f"[Hyperliquid] Using '{candidates[0]}' for requested {pair}")
+                logger.debug(f"[Hyperliquid] Using '{candidates[0]}' for requested {pair}")
 
             self.pair_to_market[pair] = market_id
 
         self._initialized = True
-        logger.info(f"[Hyperliquid] Initialized markets: {self.pair_to_market}")
+        logger.debug(f"[Hyperliquid] Initialized markets: {self.pair_to_market}")
 
     async def connect(self):
         """Single background task to keep self.latest_prices updated."""
@@ -143,9 +143,17 @@ class HyperliquidFetcher(ExchangeFetcher):
                                 # logger.debug(f"[Hyperliquid] Raw ticker info for {pair}: {info}")
                                 price = info["last"]
                                 ts_ms = info["timestamp"]
+                                if price is None:
+                                    logger.debug(f"[Hyperliquid] Missing price for {pair}, skipping update.")
+                                    continue  # Skip this symbol if price is invalid
+                                if ts_ms:
+                                    ts = datetime.fromtimestamp(ts_ms / 1000, timezone.utc)
+                                else:
+                                    ts = datetime.now(timezone.utc)
+                        
                                 # self.latest_data[symbol] = (price, ts_ms)
                                 # logger.debug(f"[Hyperliquid] Latest price for {pair}: {price} at raw : {ts_ms} \n converted:{datetime.fromtimestamp(ts_ms / 1000, timezone.utc)}")
-                                self.latest_prices[pair] = info['last']
+                                self.latest_prices[pair] = (price, ts)
 
                     # Fallback to individual watch_ticker calls
                     except AttributeError:
@@ -171,8 +179,10 @@ class HyperliquidFetcher(ExchangeFetcher):
         """
         Just like BinanceFetcher: return (price, timestamp) for a given pair.
         """
-        price = self.latest_prices.get(symbol)
-        if price is not None:
-            return price, datetime.now(timezone.utc)
+        result = self.latest_prices.get(symbol)
+        if result:
+            price, ts = result
+            if price is not None:
+                return price, ts
         return None, None
 

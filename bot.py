@@ -52,10 +52,19 @@ async def main():
             # Add more pairs as needed
             # HyperLiquid supports only USDC pairs, so we will use USDC as the quote currency.
             pairs = [
+                'BTC/USDC',
+                'ETH/USDC',
+                'SOL/USDC',
+                'DOGE/USDC',
                 'ADA/USDC',
                 'AVAX/USDC',
                 'XRP/USDC',
                 'LTC/USDC',
+                'DOT/USDC',
+                'LINK/USDC',
+                'BCH/USDC',
+                'ALGO/USDC',
+                'ATOM/USDC',
             ]
             
             # Instantiate batch fetchers

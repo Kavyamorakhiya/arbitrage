@@ -79,10 +79,17 @@ class KrakenFetcher(ExchangeFetcher):
                     for symbol, ticker in tickers.items():
                         price = ticker["last"]
                         ts_ms = ticker["timestamp"]
+                        if price is None:
+                            logger.debug(f"[kraken] Missing price for {symbol}, skipping update.")
+                            continue  # Skip this symbol if price is invalid
+                        if ts_ms:
+                            ts = datetime.fromtimestamp(ts_ms / 1000, timezone.utc)
+                        else:
+                            ts = datetime.now(timezone.utc)
+                        self.latest_prices[symbol] = (price, ts)
                         # logger.debug(f"[Kraken] Raw ticker info for {symbol}: {ticker}")
                         # self.latest_data[symbol] = (price, ts_ms)
                         # logger.debug(f"[Kraken] Latest price for {symbol}: {price} at raw : {ts_ms} \n converted:{datetime.fromtimestamp(ts_ms / 1000, timezone.utc)}")
-                        self.latest_prices[symbol] = ticker["last"]
                     self.connected = True
                 except Exception as e:
                     self.connected = False
@@ -98,8 +105,9 @@ class KrakenFetcher(ExchangeFetcher):
 
     async def get_price(self, symbol: str) -> Optional[Tuple[float, datetime]]:
         """Return latest price for a given symbol + timestamp."""
-        price = self.latest_prices.get(symbol)
-        if price is not None:
-            return price, datetime.now(timezone.utc)
+        result = self.latest_prices.get(symbol)
+        if result:
+            price, ts = result
+            if price is not None:
+                return price, ts
         return None, None
-
